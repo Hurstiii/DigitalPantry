@@ -45,9 +45,11 @@ AndroidApp/DigitalPantryApp/**/.idea/gradle.xml
 AndroidApp/DigitalPantryApp/**/.idea/assetWizardSettings.xml
 AndroidApp/DigitalPantryApp/**/.idea/dictionaries
 AndroidApp/DigitalPantryApp/**/.idea/libraries
+
 # Android Studio 3 in .gitignore file.
 AndroidApp/DigitalPantryApp/**/.idea/caches
 AndroidApp/DigitalPantryApp/**/.idea/modules.xml
+
 # Comment next line if keeping position of elements in Navigation Editor is relevant for you
 AndroidApp/DigitalPantryApp/**/.idea/navEditor.xml
 

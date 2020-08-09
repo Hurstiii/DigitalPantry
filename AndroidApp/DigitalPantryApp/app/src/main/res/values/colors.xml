@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:android="http://schemas.android.com/apk/res/android">
+    <color name="colorPrimary">#000000</color>
+    <color name="colorOnPrimary">#5F5F5F</color>
+    <color name="colorAccent">#e36387</color>
+    <color name="positiveFeedback">#B5EAD7</color>
+    <color name="negativeFeedback">#FF9AA2</color>
+    <color name="blueHighlight">#ddf3f5</color>
+    <color name="pinkHighlight">#f2aaaa</color>
+    <color name="blue">#a6dcef</color>
+    <color name="pink">#e36387</color>
+</resources>
