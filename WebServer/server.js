@@ -25,61 +25,60 @@ const product_items = Joi.array().items(
 
 const pantry_item = Joi.object({
   barcode: Joi.string().max(80).required(),
-  quantity: Joi.number().max(999).required(),
+  quantity: Joi.number().required(),
 }).unknown(allow)
 const pantry_items = Joi.array().items(
   pantry_item
 ).single();
 
+async function instantiate_tables() {
+  let create_tags = "CREATE TABLE IF NOT EXISTS tags (" +
+    "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+    "colour INTEGER, " +
+    "tag VARCHAR(20), " +
+    "CONSTRAINT UC_tag UNIQUE (colour, tag)" +
+    ")"
+
+  let create_products = "CREATE TABLE IF NOT EXISTS products (" +
+    "barcode VARCHAR(80) PRIMARY KEY, " +
+    "format VARCHAR(20), " +
+    "name VARCHAR(100), " +
+    "unit VARCHAR(20), " +
+    "inital_amount FLOAT" +
+    ")"
+
+  let create_prod_tags = "CREATE TABLE IF NOT EXISTS prod_tags (" +
+    "barcode VARCHAR(80), " +
+    "tag_id INTEGER, " +
+    "PRIMARY KEY (barcode, tag_id), " +
+    "FOREIGN KEY (barcode) REFERENCES products(barcoe) ON DELETE CASCADE, " +
+    "FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE" +
+    ")"
+
+  let create_pantry = "CREATE TABLE IF NOT EXISTS pantry (" +
+    "barcode VARCHAR(80) PRIMARY KEY, " +
+    "quantity FLOAT, " +
+    "FOREIGN KEY (barcode) REFERENCES products(barcode) ON DELETE CASCADE" +
+    ")"
+
+  // TODO : change to use Array.map and one db.run. Making it easier to trak which creations worked and failed
+  await Promise.all([
+    db.run(create_products),
+    db.run(create_tags)
+  ])
+    .then(() => {
+      db.run(create_prod_tags)
+      db.run(create_pantry)
+    })
+    .catch(err => {
+      Log.log(`Failed to create all the tables : Encounted an error`)
+    })
+}
 
 /**
  * Connect to database
  */
 let db
-
-async function instantiate_tables() {
-  let create_tags = "CREATE TABLE IF NOT EXISTS tags (" +
-  "id INTEGER IDENTITY NOT NULL PRIMARY KEY, " +
-  "colour INTEGER, " +
-  "tag VARCHAR(20), " +
-  "CONSTRAINT UC_tag UNIQUE (colour, tag)" +
-  ")"
-
-  let create_products = "CREATE TABLE IF NOT EXISTS products (" +
-  "barcode VARCHAR(80) PRIMARY KEY, " +
-  "format VARCHAR(20), " +
-  "name VARCHAR(100), " +
-  "unit VARCHAR(20), " +
-  "inital_amount FLOAT" +
-  ")"
-
-  let create_prod_tags = "CREATE TABLE IF NOT EXISTS prod_tags (" +
-  "barcode VARCHAR(80), " +
-  "tag_id INTEGER, " +
-  "PRIMARY KEY (barcode, tag_id), " +
-  "FOREIGN KEY (barcode) REFERENCES products(barcoe) ON DELETE CASCADE, " +
-  "FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE" +
-  ")"
-
-  let create_pantry = "CREATE TABLE IF NOT EXISTS pantry (" +
-  "barcode VARCHAR(80) PRIMARY KEY, " +
-  "quantity FLOAT, " +
-  "FOREIGN KEY (barcode) REFERENCES products(barcode) ON DELETE CASCADE" +
-  ")"
-
-  await Promise.all([
-    db.run(create_products),
-    db.run(create_tags)
-  ])
-  .then(() => {
-    db.run(create_prod_tags)
-    db.run(create_pantry)
-  })
-  .catch(err => {
-    Log.log(`Failed to create all the tables : Encounted an error`)
-  })
-}
-
 sql.open("./digital_pantry.db")
   .then(async (_db) => {
     db = _db
@@ -91,20 +90,20 @@ sql.open("./digital_pantry.db")
       Log.log(`Clearing database : `)
       await Promise.all(tables.map(item => {
         return db.run(`DROP TABLE IF EXISTS ${item}`)
-        .then(() => {
-          Log.log(`\tSuccess`)
-        })
-        .catch(() => {
-          Log.log(`\tFailed`)
-        })
+          .then(() => {
+            Log.log(`\tSuccess`)
+          })
+          .catch(() => {
+            Log.log(`\tFailed`)
+          })
       }))
-      .then(() => {
-        Log.log(`Creating tables`)
-        instantiate_tables();
-      })
-      .catch(err => {
-        return console.error(err.message)
-      })
+        .then(() => {
+          Log.log(`Creating tables`)
+          instantiate_tables();
+        })
+        .catch(err => {
+          return console.error(err.message)
+        })
     } else {
       Log.log(`Creating tables`)
       instantiate_tables();
@@ -130,7 +129,11 @@ app.use(parser.json());
  */
 app.get("/products", (req, res, next) => {
   let log_base = `/product : GET =>`
-  service.getProducts(db, (err, count, data) => {
+  /**  
+   * TODO : use passed request body paramater to decide if tags are required
+   * TODO : e.g. body = {tags: true} etc...
+  */
+  service.getProductsWithTags(db, (err, count, data) => {
     if (err) {
       Log.log(`${log_base} ${err.errno} : ${err.message}`)
       return next(err)
@@ -155,7 +158,11 @@ app.get("/products", (req, res, next) => {
 app.get("/products/:barcode", (req, res, next) => {
   let barcode = req.params.barcode
   let log_base = `/products/${barcode} : GET =>`
-  service.getProductsItem(db, barcode, (err, count, data) => {
+  /**  
+   * TODO : use passed request body paramater to decide if tags are required
+   * TODO : e.g. body = {tags: true} etc...
+  */
+  service.getProductsItemWithTags(db, barcode, (err, count, data) => {
     if (err) {
       Log.log(`${log_base} ${err.errno} : ${err.message}`)
       return next(err);

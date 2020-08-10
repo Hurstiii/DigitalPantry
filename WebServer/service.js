@@ -1,13 +1,13 @@
 require("sqlite-async")
 let { Log } = require("./debug_logger")
-Log.verbose = false // show verbose debugging
+Log.verbose = true // show verbose debugging
 
 async function getProducts(db, onComplete) {
   let log_base = `/products : GET : getProducts =>`
   let data = []
   let count = 0
   let query = "SELECT * FROM products ORDER BY name ASC"
-  await db.each(query, function (err, row) {
+  await db.each(query, (err, row) => {
     if (err) {
       console.log(`${log_base} ${err.errno} : ${err.message}`);
     } else {
@@ -18,11 +18,59 @@ async function getProducts(db, onComplete) {
   })
     .then(() => {
       Log.ver(`${log_base} completed`, data)
-      onComplete(undefined, count, data)
+      return onComplete(undefined, count, data)
     })
     .catch(err => {
-      onComplete(err, count, data)
+      return onComplete(err, count, data)
     })
+}
+
+async function getProductsWithTags(db, onComplete) {
+  let log_base = `/productsWithTags : GET : getProductsWithTags =>`
+  return getProducts(db, async (err, count, data) => {
+    await Promise.allSettled(data.map(async item => {
+      return getTagsForProduct(db, item.barcode, (tag_err, tag_count, tags) => {
+        if (tag_err) {
+          console.error(tag_err)
+        }
+        item.tags = tags
+        Log.ver(`${log_base} added following tags to item ${item.barcode}`, tags)
+      })
+    })
+    )
+      .then(() => {
+        Log.ver(`${log_base} data = `, data)
+        return onComplete(undefined, count, data)
+      })
+      .catch(err => {
+        console.error(err.message)
+        return onComplete(err, count, data)
+      })
+  })
+}
+
+async function getTagsForProduct(db, barcode, onComplete) {
+  let log_base = `/productsWithTags : GET : getTagsForProducts => `
+  let tags = []
+  let count = 0
+  let tags_query = "SELECT tags.colour, tags.tag " +
+    "FROM products " +
+    "INNER JOIN (" +
+    "SELECT * FROM prod_tags INNER JOIN tags ON prod_tags.tag_id = tags.id" +
+    ") as tags ON products.barcode = tags.barcode " +
+    "AND tags.barcode = " + `"${barcode}"` + " " +
+    "ORDER BY tags.tag ASC"
+
+  await db.each(tags_query, function (err, tag_row) {
+    if (err) {
+      console.error(`${log_base} ${err.errno} : ${err.message}`)
+    } else {
+      tags.push(tag_row)
+      count++
+    }
+  })
+  Log.ver(`${log_base} ${count} tags found for product ${barcode}`)
+  return onComplete(undefined, count, tags)
 }
 
 async function getProductsItem(db, barcode, onComplete) {
@@ -32,7 +80,7 @@ async function getProductsItem(db, barcode, onComplete) {
   let query = `SELECT * FROM products WHERE barcode="${barcode}" ORDER BY name ASC`
   await db.each(query, (err, row) => {
     if (err) {
-      console.log(`${log_base} ${err.errno} : ${err.message}`);
+      console.error(`${log_base} ${err.errno} : ${err.message}`);
     } else {
       data.push(row)
       count++
@@ -48,6 +96,30 @@ async function getProductsItem(db, barcode, onComplete) {
     })
 }
 
+async function getProductsItemWithTags(db, barcode, onComplete) {
+  let log_base = `/productsItemWithTags : GET : getProductsItemWithTags =>`
+  return getProductsItem(db, barcode, async (err, count, data) => {
+    await Promise.allSettled(data.map(async item => {
+      return getTagsForProduct(db, item.barcode, (tag_err, tag_count, tags) => {
+        if (tag_err) {
+          console.error(tag_err)
+        }
+        item.tags = tags
+        Log.ver(`${log_base} added following tags to item ${item.barcode}`, tags)
+      })
+    })
+    )
+      .then(() => {
+        Log.ver(`${log_base} data = `, data)
+        return onComplete(undefined, count, data)
+      })
+      .catch(err => {
+        console.error(err.message)
+        return onComplete(err, count, data)
+      })
+  })
+}
+
 async function getPantry(db, onComplete) {
   let log_base = `/pantry : GET : getPantry =>`
   let data = []
@@ -55,7 +127,7 @@ async function getPantry(db, onComplete) {
   let query = "SELECT * FROM pantry INNER JOIN products ON pantry.barcode = products.barcode ORDER BY products.name ASC"
   await db.each(query, function (err, row) {
     if (err) {
-      console.log(`${log_base} ${err.errno} : ${err.message}`);
+      console.error(`${log_base} ${err.errno} : ${err.message}`);
     } else {
       data.push(row)
       count++
@@ -64,10 +136,10 @@ async function getPantry(db, onComplete) {
   })
     .then(() => {
       Log.ver(`${log_base} completed`, data)
-      onComplete(undefined, count, data)
+      return onComplete(undefined, count, data)
     })
     .catch(err => {
-      onComplete(err, count, data)
+      return onComplete(err, count, data)
     })
 }
 
@@ -79,7 +151,55 @@ async function getPantryItem(db, barcode, onComplete) {
 
   await db.each(query, (err, row) => {
     if (err) {
-      console.log(`${log_base} ${err.errno} : ${err.message}`);
+      console.error(`${log_base} ${err.errno} : ${err.message}`);
+    } else {
+      data.push(row)
+      count++
+      Log.ver(`${log_base} on row ${count}`, row)
+    }
+  })
+    .then(() => {
+      Log.ver(`${log_base} completed`, data)
+      return onComplete(undefined, count, data)
+    })
+    .catch(err => {
+      Log.ver(`${log_base} error'd out`, data)
+      return onComplete(err, count, data)
+    })
+}
+
+async function getTags(db, onComplete) {
+  let log_base = `/tags : GET : getTags =>`
+  let data = []
+  let count = 0
+  let query = "SELECT * FROM tags ORDER BY products.name ASC"
+  await db.each(query, function (err, row) {
+    if (err) {
+      console.error(`${log_base} ${err.errno} : ${err.message}`);
+    } else {
+      data.push(row)
+      count++
+      Log.ver(`${log_base} on row ${count}`, row)
+    }
+  })
+    .then(() => {
+      Log.ver(`${log_base} completed`, data)
+      return onComplete(undefined, count, data)
+    })
+    .catch(err => {
+      return onComplete(err, count, data)
+    })
+}
+
+async function getTagItem(db, id, onComplete) {
+  let log_base = `/tags/${id} : GET : getTagItem =>`
+  let data = []
+  let count = 0
+  let query = `SELECT * FROM tags WHERE id="${id}" ORDER BY name ASC`
+
+  await db.each(query, (err, row) => {
+    if (err) {
+      console.error(`${log_base} ${err.errno} : ${err.message}`);
     } else {
       data.push(row)
       count++
@@ -274,7 +394,10 @@ module.exports = {
   getPantry,
   getPantryItem,
   getProducts,
+  getProductsWithTags,
+  getTagsForProduct,
   getProductsItem,
+  getProductsItemWithTags,
   insertPantry,
   insertProducts,
   updatePantryItem,
