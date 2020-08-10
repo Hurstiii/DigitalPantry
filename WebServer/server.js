@@ -16,6 +16,8 @@ const product_item = Joi.object({
   barcode: Joi.string().max(80).required(),
   name: Joi.string().max(100).required(),
   format: Joi.string().required(),
+  unit: Joi.string().required(),
+  initial_amount: Joi.number().required(),
 })
 const product_items = Joi.array().items(
   product_item
@@ -35,34 +37,81 @@ const pantry_items = Joi.array().items(
  */
 let db
 
+async function instantiate_tables() {
+  let create_tags = "CREATE TABLE IF NOT EXISTS tags (" +
+  "id INTEGER IDENTITY NOT NULL PRIMARY KEY, " +
+  "colour INTEGER, " +
+  "tag VARCHAR(20), " +
+  "CONSTRAINT UC_tag UNIQUE (colour, tag)" +
+  ")"
+
+  let create_products = "CREATE TABLE IF NOT EXISTS products (" +
+  "barcode VARCHAR(80) PRIMARY KEY, " +
+  "format VARCHAR(20), " +
+  "name VARCHAR(100), " +
+  "unit VARCHAR(20), " +
+  "inital_amount FLOAT" +
+  ")"
+
+  let create_prod_tags = "CREATE TABLE IF NOT EXISTS prod_tags (" +
+  "barcode VARCHAR(80), " +
+  "tag_id INTEGER, " +
+  "PRIMARY KEY (barcode, tag_id), " +
+  "FOREIGN KEY (barcode) REFERENCES products(barcoe) ON DELETE CASCADE, " +
+  "FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE" +
+  ")"
+
+  let create_pantry = "CREATE TABLE IF NOT EXISTS pantry (" +
+  "barcode VARCHAR(80) PRIMARY KEY, " +
+  "quantity FLOAT, " +
+  "FOREIGN KEY (barcode) REFERENCES products(barcode) ON DELETE CASCADE" +
+  ")"
+
+  await Promise.all([
+    db.run(create_products),
+    db.run(create_tags)
+  ])
+  .then(() => {
+    db.run(create_prod_tags)
+    db.run(create_pantry)
+  })
+  .catch(err => {
+    Log.log(`Failed to create all the tables : Encounted an error`)
+  })
+}
+
 sql.open("./digital_pantry.db")
-  .then(_db => {
+  .then(async (_db) => {
     db = _db
     Log.log("Openned the SQlite database.");
 
     // delete the tables so they can be recreated (inorder to reset the database)
+    let tables = ["products", "pantry", "tags", "prod_tags"]
     if (db_reset === true) {
-      db.run("DROP TABLE IF EXISTS products").run("DROP TABLE IF EXISTS pantry");
+      Log.log(`Clearing database : `)
+      await Promise.all(tables.map(item => {
+        return db.run(`DROP TABLE IF EXISTS ${item}`)
+        .then(() => {
+          Log.log(`\tSuccess`)
+        })
+        .catch(() => {
+          Log.log(`\tFailed`)
+        })
+      }))
+      .then(() => {
+        Log.log(`Creating tables`)
+        instantiate_tables();
+      })
+      .catch(err => {
+        return console.error(err.message)
+      })
+    } else {
+      Log.log(`Creating tables`)
+      instantiate_tables();
     }
-
-    // create tables if they don't exist
-    db.run(
-      "CREATE TABLE IF NOT EXISTS products (" +
-      "barcode VARCHAR(80) PRIMARY KEY, " +
-      "format VARCHAR(20), " +
-      "name VARCHAR(100)" +
-      ")"
-    )
-    db.run(
-      "CREATE TABLE IF NOT EXISTS pantry (" +
-      "barcode VARCHAR(80) PRIMARY KEY, " +
-      "quantity INTEGER, " +
-      "FOREIGN KEY (barcode) REFERENCES products(barcode) ON DELETE CASCADE" +
-      ")"
-    );
   })
   .catch(err => {
-    return console.error(err.message);
+    return console.error(err.message)
   })
 
 
