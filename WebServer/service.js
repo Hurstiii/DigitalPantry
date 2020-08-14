@@ -1,6 +1,6 @@
 require("sqlite-async");
 let { Log } = require("./debug_logger");
-Log.verbose = false; // show verbose debugging
+Log.verbose = true; // show verbose debugging
 
 async function getProducts(db, onComplete) {
   let log_base = `/products : GET : getProducts =>`;
@@ -17,13 +17,15 @@ async function getProducts(db, onComplete) {
         Log.ver(`${log_base} on row ${count}`, row);
       }
     })
-    .catch((err) => {
-      return onComplete(err, count, data);
-    })
-    .then(() => {
-      Log.ver(`${log_base} completed`, data);
-      return onComplete(undefined, count, data);
-    });
+    .then(
+      () => {
+        Log.ver(`${log_base} completed`, data);
+        return onComplete(undefined, count, data);
+      },
+      (err) => {
+        return onComplete(err, count, data);
+      }
+    );
 }
 
 async function getProductsWithTags(db, onComplete) {
@@ -46,15 +48,16 @@ async function getProductsWithTags(db, onComplete) {
           }
         );
       })
-    )
-      .catch((err) => {
-        console.error(err.message);
-        return onComplete(err, count, data);
-      })
-      .then(() => {
+    ).then(
+      () => {
         Log.ver(`${log_base} data = `, data);
         return onComplete(undefined, count, data);
-      });
+      },
+      (err) => {
+        console.error(err.message);
+        return onComplete(err, count, data);
+      }
+    );
   });
 }
 
@@ -100,13 +103,15 @@ async function getProductsItem(db, barcode, onComplete) {
         Log.ver(`${log_base} on row ${count}`, data);
       }
     })
-    .catch((err) => {
-      return onComplete(err, count, data);
-    })
-    .then(() => {
-      Log.ver(`${log_base} completed`, data);
-      return onComplete(undefined, count, data);
-    });
+    .then(
+      () => {
+        Log.ver(`${log_base} completed`, data);
+        return onComplete(undefined, count, data);
+      },
+      (err) => {
+        return onComplete(err, count, data);
+      }
+    );
 }
 
 async function getProductsItemWithTags(db, barcode, onComplete) {
@@ -129,15 +134,16 @@ async function getProductsItemWithTags(db, barcode, onComplete) {
           }
         );
       })
-    )
-      .catch((err) => {
-        console.error(err.message);
-        return onComplete(err, count, data);
-      })
-      .then(() => {
+    ).then(
+      () => {
         Log.ver(`${log_base} data = `, data);
         return onComplete(undefined, count, data);
-      });
+      },
+      (err) => {
+        console.error(err.message);
+        return onComplete(err, count, data);
+      }
+    );
   });
 }
 
@@ -157,13 +163,16 @@ async function getPantry(db, onComplete) {
         Log.ver(`${log_base} on row ${count}`, row);
       }
     })
-    .catch((err) => {
-      return onComplete(err, count, data);
-    })
-    .then(() => {
-      Log.ver(`${log_base} completed`, data);
-      return onComplete(undefined, count, data);
-    });
+    .then(
+      () => {
+        Log.ver(`${log_base} completed`, data);
+        return onComplete(undefined, count, data);
+      },
+      (err) => {
+        Log.ver(`${log_base} error'd out`, data);
+        return onComplete(err, count, data);
+      }
+    );
 }
 
 async function getPantryWithTags(db, onComplete) {
@@ -214,14 +223,16 @@ async function getPantryItem(db, barcode, onComplete) {
         Log.ver(`${log_base} on row ${count}`, row);
       }
     })
-    .catch((err) => {
-      Log.ver(`${log_base} error'd out`, data);
-      return onComplete(err, count, data);
-    })
-    .then(() => {
-      Log.ver(`${log_base} completed`, data);
-      return onComplete(undefined, count, data);
-    });
+    .then(
+      () => {
+        Log.ver(`${log_base} completed`, data);
+        return onComplete(undefined, count, data);
+      },
+      (err) => {
+        Log.ver(`${log_base} error'd out`, data);
+        return onComplete(err, count, data);
+      }
+    );
 }
 
 async function getPantryItemWithTags(db, barcode, onComplete) {
@@ -260,7 +271,7 @@ async function getTags(db, onComplete) {
   let log_base = `/tags : GET : getTags =>`;
   let data = [];
   let count = 0;
-  let query = "SELECT * FROM tags ORDER BY products.name ASC";
+  let query = "SELECT * FROM tags ORDER BY tags.tag ASC";
   await db
     .each(query, function (err, row) {
       if (err) {
@@ -271,20 +282,23 @@ async function getTags(db, onComplete) {
         Log.ver(`${log_base} on row ${count}`, row);
       }
     })
-    .catch((err) => {
-      return onComplete(err, count, data);
-    })
-    .then(() => {
-      Log.ver(`${log_base} completed`, data);
-      return onComplete(undefined, count, data);
-    });
+    .then(
+      () => {
+        Log.ver(`${log_base} completed`, data);
+        return onComplete(undefined, count, data);
+      },
+      (err) => {
+        Log.ver(`${log_base} error'd out`, data);
+        return onComplete(err, count, data);
+      }
+    );
 }
 
 async function getTagsItem(db, id, onComplete) {
   let log_base = `/tags/${id} : GET : getTagItem =>`;
   let data = [];
   let count = 0;
-  let query = `SELECT * FROM tags WHERE id="${id}" ORDER BY name ASC`;
+  let query = `SELECT * FROM tags WHERE id="${id}" ORDER BY tag ASC`;
 
   await db
     .each(query, (err, row) => {
@@ -296,51 +310,122 @@ async function getTagsItem(db, id, onComplete) {
         Log.ver(`${log_base} on row ${count}`, row);
       }
     })
-    .catch((err) => {
-      Log.ver(`${log_base} error'd out`, data);
-      onComplete(err, count, data);
-    })
-    .then(() => {
-      Log.ver(`${log_base} completed`, data);
-      onComplete(undefined, count, data);
-    });
+    .then(
+      () => {
+        Log.ver(`${log_base} completed`, data);
+        return onComplete(undefined, count, data);
+      },
+      (err) => {
+        Log.ver(`${log_base} error'd out`, data);
+        return onComplete(err, count, data);
+      }
+    );
 }
 
 async function insertProducts(db, data, onComplete) {
   let log_base = `/product : POST : insertProduct =>`;
   Log.ver(`${log_base} data passed in was`, data);
+
   if (!(data instanceof Array)) {
-    let err = new Error(`${log_base} data is not an array or object`);
+    let err = new Error(`${log_base} data is not an array`);
     onComplete(err, 0);
     return;
   }
 
-  values = data
+  let product_values = data
     .map(
       (item) =>
         `("${item.barcode}", "${item.format}", "${item.name}", "${item.unit}", "${item.initial_amount}")`
     )
     .join(",");
-  let query = `INSERT INTO products VALUES ${values}`;
-  await db
-    .run(query)
-    .catch((err) => {
-      Log.ver(`${log_base} error'd out`);
-      return onComplete(err, 0);
-    })
-    .then((result) => {
+
+  let query = `INSERT INTO products VALUES ${product_values}`;
+  await db.run(query).then(
+    (result) => {
       Log.ver(
         `${log_base} completed with ${result.changes} ${
           result.changes === 1 ? "change" : "changes"
-        }`
+        } to the products table`
+      );
+      return insertProductsTags(db, data, (err, count) => {
+        return onComplete(err, result.changes);
+      });
+    },
+    (err) => {
+      Log.ver(`${log_base} error'd out`);
+      return onComplete(err, 0);
+    }
+  );
+}
+
+async function insertProductsTags(db, data, onComplete) {
+  let log_base = `linkProductsToTags =>`;
+  let valid_tags = [];
+  await getTags(db, (err, count, data) => {
+    if (err) {
+      return onComplete(err, 0);
+    }
+    valid_tags = data;
+  });
+
+  let tag_links = data.map((item) => {
+    let item_tags = item.tags.map((tag_data) => {
+      // check each tag is in the database - maybe?
+      let exists = valid_tags.find((valid_tag) => {
+        return valid_tag.id === tag_data.id;
+      });
+
+      // get the id of the tag and create a link between barcode and id
+      if (exists) {
+        return `("${item.barcode}", ${tag_data.id})`;
+      } else {
+        return ``;
+      }
+    });
+    Log.ver(
+      `${log_base} tag_links created for item ${item.barcode}`,
+      item_tags
+    );
+    return item_tags.join(",");
+  });
+  tag_links = tag_links.join(",");
+  Log.ver(`${log_base} all tag_links created`, tag_links);
+
+  if (tag_links === "") {
+    return onComplete(
+      new Error(
+        "tags couldn't be inserted because they weren't found in the tags table"
+      ),
+      0
+    );
+  }
+
+  let query = `INSERT INTO prod_tags VALUES ${tag_links}`;
+  await db.run(query).then(
+    (result) => {
+      Log.ver(
+        `${log_base} completed with ${result.changes} ${
+          result.changes === 1 ? "change" : "changes"
+        } to the product_tags link table`
       );
       return onComplete(undefined, result.changes);
-    });
+    },
+    (err) => {
+      Log.ver(`${log_base} error'd out`);
+      return onComplete(err, 0);
+    }
+  );
 }
 
 async function insertPantry(db, data, onComplete) {
   let log_base = `/product : POST : insertPantry =>`;
   let inserts = 0;
+
+  if (!(data instanceof Array)) {
+    let err = new Error(`${log_base} data is not an array`);
+    return onComplete(err, 0);
+  }
+
   await Promise.all(
     data.map(async (item) => {
       if (item.quantity <= 0) {
@@ -423,23 +508,51 @@ async function insertPantry(db, data, onComplete) {
         }
       });
     })
-  )
-    .then((result) => {
+  ).then(
+    (result) => {
       Log.ver(
         `${log_base} completed with ${inserts} ${
           inserts === 1 ? "inserts" : "inserts"
         }`
       );
       return onComplete(undefined, inserts);
-    })
-    .catch((err) => {
+    },
+    (err) => {
       Log.ver(
         `${log_base} error'd out with ${inserts} ${
           inserts === 1 ? "inserts" : "inserts"
         }`
       );
       return onComplete(err, inserts);
-    });
+    }
+  );
+}
+
+async function insertTags(db, data, onComplete) {
+  let log_base = `/tags : POST : insertTags =>`;
+  Log.ver(`${log_base} data passed in was`, data);
+  if (!(data instanceof Array)) {
+    let err = new Error(`${log_base} data is not an array`);
+    onComplete(err, 0);
+    return;
+  }
+
+  values = data.map((item) => `("${item.colour}", "${item.tag}")`).join(",");
+  let query = `INSERT INTO tags (colour, tag) VALUES ${values}`;
+  await db.run(query).then(
+    (result) => {
+      Log.ver(
+        `${log_base} completed with ${result.changes} ${
+          result.changes === 1 ? "change" : "changes"
+        }`
+      );
+      return onComplete(undefined, result.changes);
+    },
+    (err) => {
+      Log.ver(`${log_base} error'd out`);
+      return onComplete(err, 0);
+    }
+  );
 }
 
 async function updateProductsItem(db, barcode, data, onComplete) {
@@ -448,16 +561,23 @@ async function updateProductsItem(db, barcode, data, onComplete) {
   SET format="${data.format}", name="${data.name}", unit="${data.unit}", initial_amount="${data.initial_amount}"
   WHERE barcode="${barcode}"`;
   Log.ver(`${log_base} data to update to`, data);
-  await db
-    .run(query)
-    .then((result) => {
+  await db.run(query).then(
+    (result) => {
       Log.ver(`${log_base} completed`);
-      onComplete(undefined);
-    })
-    .catch((err) => {
+      if (result.changes <= 0) {
+        Log.ver(
+          `${log_base} item doesn't exist with barcode ${barcode}, so no changes`
+        );
+        return onComplete(new Error(`No record with barcode ${barcode}`));
+      } else {
+        return onComplete(undefined);
+      }
+    },
+    (err) => {
       Log.ver(`${log_base} error'd`);
-      onComplete(err);
-    });
+      return onComplete(err);
+    }
+  );
 }
 
 async function updatePantryItem(db, barcode, data, onComplete) {
@@ -473,48 +593,113 @@ async function updatePantryItem(db, barcode, data, onComplete) {
   }
 
   Log.ver(`${log_base} data to update to`, data);
-  await db
-    .run(query)
-    .then((result) => {
+  await db.run(query).then(
+    (result) => {
       Log.ver(`${log_base} completed`);
-      onComplete(undefined);
-    })
-    .catch((err) => {
+      if (result.changes <= 0) {
+        Log.ver(
+          `${log_base} item doesn't exist with barcode ${barcode}, so no changes`
+        );
+        return onComplete(new Error(`No record with barcode ${barcode}`));
+      } else {
+        return onComplete(undefined);
+      }
+    },
+    (err) => {
       Log.ver(`${log_base} error'd`);
-      onComplete(err);
-    });
+      return onComplete(err);
+    }
+  );
+}
+
+async function updateTagsItem(db, id, data, onComplete) {
+  let log_base = `/tags/${id} : PUT : updateTagsItem => `;
+  let query = `UPDATE tags 
+  SET colour=${data.colour}, tag="${data.tag}"
+  WHERE id="${id}"`;
+
+  Log.ver(`${log_base} data to update to`, data);
+  await db.run(query).then(
+    (result) => {
+      Log.ver(`${log_base} completed`);
+      if (result.changes <= 0) {
+        Log.ver(`${log_base} item doesn't exist with id ${id}, so no changes`);
+        return onComplete(new Error(`No record with id ${id}`));
+      } else {
+        return onComplete(undefined);
+      }
+    },
+    (err) => {
+      Log.ver(`${log_base} error'd`);
+      return onComplete(err);
+    }
+  );
 }
 
 async function deleteProductItem(db, barcode, onComplete) {
   let log_base = `/products/${barcode} : DELETE : deleteProductItem => `;
   let query = `DELETE FROM products WHERE barcode="${barcode}"`;
 
-  await db
-    .run(query)
-    .then((result) => {
+  await db.run(query).then(
+    (result) => {
       Log.ver(`${log_base} completed`);
-      onComplete(undefined);
-    })
-    .catch((err) => {
+      if (result.changes <= 0) {
+        Log.ver(
+          `${log_base} item doesn't exist with barcode ${barcode}, so no changes`
+        );
+        return onComplete(new Error(`No record with barcode ${barcode}`));
+      }
+      return onComplete(undefined);
+    },
+    (err) => {
       Log.ver(`${log_base} error'd`);
-      onComplete(err);
-    });
+      return onComplete(err);
+    }
+  );
 }
 
 async function deletePantryItem(db, barcode, onComplete) {
   let log_base = `/pantry/${barcode} : DELETE : deletePantryItem => `;
   let query = `DELETE FROM pantry WHERE barcode="${barcode}"`;
 
-  await db
-    .run(query)
-    .then((result) => {
+  await db.run(query).then(
+    (result) => {
       Log.ver(`${log_base} completed`);
-      onComplete(undefined);
-    })
-    .catch((err) => {
+      if (result.changes <= 0) {
+        Log.ver(
+          `${log_base} item doesn't exist with barcode ${barcode}, so no changes`
+        );
+        return onComplete(new Error(`No record with barcode ${barcode}`));
+      } else {
+        return onComplete(undefined);
+      }
+    },
+    (err) => {
       Log.ver(`${log_base} error'd`);
-      onComplete(err);
-    });
+      return onComplete(err);
+    }
+  );
+}
+
+async function deleteTagsItem(db, id, onComplete) {
+  let log_base = `/tags/${id} : DELETE : deleteTagsItem => `;
+  let query = `DELETE FROM tags WHERE id="${id}"`;
+
+  await db.run(query).then(
+    (result) => {
+      Log.ver(`${log_base} completed`);
+      if (result.changes <= 0) {
+        Log.ver(`${log_base} item doesn't exist with id ${id}, so no changes`);
+        return onComplete(new Error(`No record with barcode ${id}`));
+      } else {
+        return onComplete(undefined);
+      }
+    },
+    (err) => {
+      Log.ver(`${log_base} error'd`);
+      return onComplete(err);
+    }
+  );
 }
 
 module.exports = {
@@ -527,10 +712,15 @@ module.exports = {
   getProductsItemWithTags,
   getPantryWithTags,
   getPantryItemWithTags,
+  getTags,
+  getTagsItem,
   insertPantry,
   insertProducts,
+  insertTags,
   updatePantryItem,
   updateProductsItem,
+  updateTagsItem,
   deletePantryItem,
   deleteProductItem,
+  deleteTagsItem,
 };

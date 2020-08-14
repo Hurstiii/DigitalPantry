@@ -18,6 +18,11 @@ const product_item = Joi.object({
   format: Joi.string().required(),
   unit: Joi.string().required().lowercase(),
   initial_amount: Joi.number().required(),
+  tags: Joi.array().items(
+    Joi.object({
+      id: Joi.number(),
+    }).unknown(allow)
+  ),
 });
 const product_items = Joi.array().items(product_item).single();
 
@@ -26,6 +31,12 @@ const pantry_item = Joi.object({
   quantity: Joi.number().required(),
 }).unknown(allow);
 const pantry_items = Joi.array().items(pantry_item).single();
+
+const tags_item = Joi.object({
+  tag: Joi.string().max(80).required(),
+  colour: Joi.number().required(),
+}).unknown(allow);
+const tags_items = Joi.array().items(tags_item).single();
 
 async function instantiate_tables() {
   let create_tags =
@@ -42,7 +53,7 @@ async function instantiate_tables() {
     "format VARCHAR(20), " +
     "name VARCHAR(100), " +
     "unit VARCHAR(20), " +
-    "inital_amount FLOAT" +
+    "initial_amount FLOAT" +
     ")";
 
   let create_prod_tags =
@@ -103,7 +114,7 @@ sql
           instantiate_tables();
         })
         .catch((err) => {
-          return console.error(err.message);
+          return Log.log(err.message);
         });
     } else {
       Log.log(`Creating tables`);
@@ -111,7 +122,7 @@ sql
     }
   })
   .catch((err) => {
-    return console.error(err.message);
+    return Log.log(err.message);
   });
 
 /**
@@ -198,7 +209,7 @@ app.get("/products/:barcode", (req, res, next) => {
           `https://api.barcodelookup.com/v2/products?barcode=${barcode}&key=jv77gduzju09rcu0e46njt0mb6fify`,
           function (err, extRes, body) {
             if (err) {
-              console.error(`${log_base} ${err.errno} : ${err.message}`);
+              Log.log(`${log_base} ${err.errno} : ${err.message}`);
               return next(err);
             }
 
@@ -224,7 +235,7 @@ app.get("/products/:barcode", (req, res, next) => {
               let name = item.product_name;
 
               if (name === undefined || name === "") {
-                console.error(
+                Log.log(
                   `${log_base} 404 : Product found but has no accossiated name`
                 );
                 return res.status(404).json({ data: data });
@@ -235,7 +246,7 @@ app.get("/products/:barcode", (req, res, next) => {
                          VALUES ("${req.params.barcode}", "N/A", "${name}")`;
               db.run(query, function (err) {
                 if (err) {
-                  console.error(`${log_base} ${err.errno} : ${err.message}`);
+                  Log.log(`${log_base} ${err.errno} : ${err.message}`);
                   return next(err);
                 }
 
@@ -276,7 +287,7 @@ app.get("/products/:barcode", (req, res, next) => {
           `https://api.barcodelookup.com/v2/products?barcode=${barcode}&key=jv77gduzju09rcu0e46njt0mb6fify`,
           function (err, extRes, body) {
             if (err) {
-              console.error(`${log_base} ${err.errno} : ${err.message}`);
+              Log.log(`${log_base} ${err.errno} : ${err.message}`);
               return next(err);
             }
 
@@ -302,7 +313,7 @@ app.get("/products/:barcode", (req, res, next) => {
               let name = item.product_name;
 
               if (name === undefined || name === "") {
-                console.error(
+                Log.log(
                   `${log_base} 404 : Product found but has no accossiated name`
                 );
                 return res.status(404).json({ data: data });
@@ -313,7 +324,7 @@ app.get("/products/:barcode", (req, res, next) => {
                          VALUES ("${req.params.barcode}", "N/A", "${name}")`;
               db.run(query, function (err) {
                 if (err) {
-                  console.error(`${log_base} ${err.errno} : ${err.message}`);
+                  Log.log(`${log_base} ${err.errno} : ${err.message}`);
                   return next(err);
                 }
 
@@ -434,6 +445,54 @@ app.get("/pantry/:barcode", (req, res, next) => {
 });
 
 /**
+ * "GET"
+ * "/tags"
+ * Returns all tags in the database
+ * format: {"data": [...]}
+ */
+app.get("/tags", (req, res, next) => {
+  let log_base = `/tags : GET =>`;
+  service.getTags(db, (err, count, data) => {
+    if (err) {
+      Log.log(`${log_base} ${err.errno} : ${err.message}`);
+      return next(err);
+    }
+
+    if (count === 0) {
+      Log.log(`${log_base} 404 Not Found : Didn't find any items`);
+      res.status(404).json({ data: data });
+    } else {
+      Log.log(`${log_base} Success : Retrieved ${count} items`);
+      res.status(200).json({ data: data });
+    }
+  });
+});
+
+/**
+ * "GET"
+ * "/tags/{id}"
+ * get the data for a specific tag
+ * format: {"data": [...]}
+ */
+app.get("/tags/:id", (req, res, next) => {
+  let id = req.params.id;
+  let log_base = `/tags/${id} : GET =>`;
+  let tags = req.headers.tags;
+  service.getTagsItem(db, id, (err, count, data) => {
+    if (err) {
+      Log.log(`${log_base} ${err.errno} : ${err.message}`);
+      return next(err);
+    } else if (count === 0) {
+      Log.log(`${log_base} 404 Not Found : Didn't find any items`);
+      res.status(404).json({ data: data });
+    } else {
+      Log.log(`${log_base} Success : Retrieved ${count} items`);
+      res.status(200).json({ data: data });
+    }
+  });
+});
+
+/**
  * "POST"
  * "/products"
  * Create a new product record and add it to the products table in the database
@@ -448,7 +507,7 @@ app.post("/products", async (req, res, next) => {
 
     service.insertProducts(db, value, (err, count) => {
       if (err) {
-        console.error(`${log_base} ${err.errno} : ${err.message}`);
+        Log.log(`${log_base} ${err.errno} : ${err.message}`);
         return next(err);
       }
       Log.log(`${log_base} Success : Rows inserted ${count}`);
@@ -470,7 +529,7 @@ app.post("/products", async (req, res, next) => {
  * "/pantry"
  * Add a new record to the pantry (barcode will link to a product in the product table)
  * @param barcode (FK) : string
- * @param quantity : string - int
+ * @param quantity : float
  * format: body = [{...}, {...}, ...]
  */
 app.post("/pantry", async (req, res, next) => {
@@ -479,8 +538,38 @@ app.post("/pantry", async (req, res, next) => {
     const value = await pantry_items.validateAsync(req.body);
     service.insertPantry(db, value, (err, inserts) => {
       if (err) {
-        next(err);
-        return;
+        return next(err);
+      }
+      Log.log(`${log_base} Success : Rows inserted ${inserts}`);
+      res
+        .status(200)
+        .send(
+          `Rows inserted ${inserts}/${
+            value.length === undefined ? 0 : value.length
+          }`
+        );
+    });
+  } catch (err) {
+    // not a valid request body
+    next(err);
+  }
+});
+
+/**
+ * "POST"
+ * "/tags"
+ * Add new records to tags
+ * @param tag : string
+ * @param colour : int
+ * format: body = [{...}, {...}, ...]
+ */
+app.post("/tags", async (req, res, next) => {
+  let log_base = `/tags : POST =>`;
+  try {
+    const value = await tags_items.validateAsync(req.body);
+    service.insertTags(db, value, (err, inserts) => {
+      if (err) {
+        return next(err);
       }
       Log.log(`${log_base} Success : Rows inserted ${inserts}`);
       res
@@ -501,21 +590,21 @@ app.post("/pantry", async (req, res, next) => {
  * "PUT"
  * "/products/{barcode}"
  * Edit the record of a specific product
- * @param barcode : string - nullable
  * @param format : string - nullable
  * @param name : string - nullable
  */
 app.put("/products/:barcode", async (req, res, next) => {
   let log_base = `/products/${req.params.barcode} : PUT =>`;
   try {
+    req.body.barcode = req.params.barcode;
     const value = await product_item.validateAsync(req.body);
     service.updateProductsItem(db, req.params.barcode, value, (err) => {
       if (err) {
-        console.error(`${log_base} ${err.errno} : ${err.message}`);
+        Log.log(`${log_base} ${err.errno} : ${err.message}`);
         return next(err);
       }
-      res.status(200).send(`${log_base} Record updated`);
-      return Log.log(`${log_base} Record updated`);
+      res.status(200).send(`Record updated`);
+      Log.log(`${log_base} Record updated`);
     });
   } catch (err) {
     next(err);
@@ -526,20 +615,44 @@ app.put("/products/:barcode", async (req, res, next) => {
  * "PUT"
  * "/pantry/{barcode}"
  * Edit a specific pantry entry (change quantity)
- * @param barcode : string - nullable
- * @param quantity : string - nullable
+ * @param quantity : string
  */
 app.put("/pantry/:barcode", async (req, res, next) => {
   let log_base = `/pantry/${req.params.barcode} : PUT =>`;
   try {
+    req.body.barcode = req.params.barcode;
     const value = await pantry_item.validateAsync(req.body);
-    service.updatePantryItem(db, req.params.barcode, req.body, (err) => {
+    service.updatePantryItem(db, req.params.barcode, value, (err) => {
       if (err) {
-        console.error(`${log_base} ${err.errno} : ${err.message}`);
+        Log.log(`${log_base} ${err.errno} : ${err.message}`);
         return next(err);
       }
-      res.status(200).send(`${log_base} Record updated`);
-      return Log.log(`${log_base} Record updated`);
+      res.status(200).send(`Record updated`);
+      Log.log(`${log_base} Record updated`);
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * "PUT"
+ * "/tags/{id}"
+ * Edit a specific tags entry
+ * @param colour : string
+ * @param tag : string
+ */
+app.put("/tags/:id", async (req, res, next) => {
+  let log_base = `/tags/${req.params.id} : PUT =>`;
+  try {
+    const value = await tags_item.validateAsync(req.body);
+    service.updateTagsItem(db, req.params.id, value, (err) => {
+      if (err) {
+        Log.log(`${log_base} ${err.errno} : ${err.message}`);
+        return next(err);
+      }
+      res.status(200).send(`Record updated`);
+      Log.log(`${log_base} Record updated`);
     });
   } catch (err) {
     next(err);
@@ -556,10 +669,10 @@ app.delete("/products/:barcode", (req, res, next) => {
   let log_base = `/products/${req.params.barcode} : DELETE =>`;
   service.deleteProductItem(db, req.params.barcode, (err) => {
     if (err) {
-      console.error(`${log_base} ${err.errno} : ${err.message}`);
+      Log.log(`${log_base} ${err.errno} : ${err.message}`);
       return next(err);
     }
-    res.status(200).send(`${log_base} Record deleted`);
+    res.status(200).send(`Record deleted`);
     return Log.log(`${log_base} Record deleted`);
   });
 });
@@ -573,10 +686,27 @@ app.delete("/pantry/:barcode", (req, res, next) => {
   let log_base = `/pantry/${req.params.barcode} : DELETE =>`;
   service.deletePantryItem(db, req.params.barcode, (err) => {
     if (err) {
-      console.error(`${log_base} ${err.errno} : ${err.message}`);
+      Log.log(`${log_base} ${err.errno} : ${err.message}`);
       return next(err);
     }
-    res.status(200).send(`${log_base} Record deleted`);
+    res.status(200).send(`Record deleted`);
+    return Log.log(`${log_base} Record deleted`);
+  });
+});
+
+/**
+ * "DELETE"
+ * "/tags/{id}"
+ * Removes an entry from the tags
+ */
+app.delete("/tags/:id", (req, res, next) => {
+  let log_base = `/tags/${req.params.id} : DELETE =>`;
+  service.deleteTagsItem(db, req.params.id, (err) => {
+    if (err) {
+      Log.log(`${log_base} ${err.errno} : ${err.message}`);
+      return next(err);
+    }
+    res.status(200).send(`Record deleted`);
     return Log.log(`${log_base} Record deleted`);
   });
 });
