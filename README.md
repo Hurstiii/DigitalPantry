@@ -3,7 +3,7 @@
 
 ### The Project
 
-This project is comprised of an android app and a web server. 
+This project is comprised of an android app and a node.js web server that uses the express framework. 
 
 ### Use
 
