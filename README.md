@@ -17,7 +17,7 @@ With the server started the last thing to do is run the app on a device. This ca
 
 The app currently has 3 screens, 1 to add products by scanning their barcodes, 1 to see the current items in the pantry and 1 to see a distinct list of all the products that have been scanned before (recognised products).
 
-### The pantry
+### The Pantry
 
 The default screen will show all the products and how many there are in the pantry currently.
 
