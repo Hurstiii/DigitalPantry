@@ -28,14 +28,14 @@ The default screen will show all the products and how many there are in the pant
 
 The screen named 'Session' is where products can be scanned and added. As the name suggests products added here are not actually in the pantry yet, this is a sort of staging area where you can add multiple products and then confirm them (with the blue tick action button). To add a product press the pink '+' button and the barcode app will launch allowing you to scan an item. The program then checks if it has seen that product before (in which case it's added to the session), and if it hasn't then it will prompt you to give details about the product. On the 'Session' screen you can swipe products left and right to decrease or increase the quantity of that item respectively. 
 
-![image](https://user-images.githubusercontent.com/43950567/127305310-9543235a-13cb-4cd8-843d-ec476ec3d28b.png)
+![image](https://user-images.githubusercontent.com/43950567/127306919-5be25e19-9978-48d9-b1a0-36b828de82a2.png)
 
 
 ### Product Database
 
 The last screen will show you all the distinct products you have registered/entered and allow you to edit their details.
 
-![image](https://user-images.githubusercontent.com/43950567/127305962-4f0d0a08-03cc-4f21-83ab-03afd687ef09.png)
+![image](https://user-images.githubusercontent.com/43950567/127306935-31d81b5e-35ac-4fbc-987e-838db4de8997.png)
 
 
 
