@@ -21,7 +21,7 @@ The app currently has 3 screens, 1 to add products by scanning their barcodes, 1
 
 The default screen will show all the products and how many there are in the pantry currently.
 
-![image](https://user-images.githubusercontent.com/43950567/127304207-1053ab80-0f5a-4afe-a56b-4d8d88973b95.png)
+![image](https://user-images.githubusercontent.com/43950567/127306741-1920d7c1-cfd8-46ca-908c-7974335df0f0.png)
 
 
 ### Adding products
